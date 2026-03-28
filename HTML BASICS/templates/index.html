@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShopOS — Smart Shop Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg:#0a0a0f; --surface:#13131a; --surface2:#1c1c28; --surface3:#242435;
+      --accent:#f0c040; --accent2:#ff6b35; --accent3:#4ade80; --accent4:#60a5fa;
+      --text:#f0eff8; --text2:#9998b8; --border:#2a2a3d; --danger:#ff4d6d;
+      --radius:16px; --radius-sm:10px;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    .screen{display:none;min-height:100vh;flex-direction:column;}
+    .screen.active{display:flex;}
+    nav.topbar{height:64px;padding:0 28px;background:rgba(19,19,26,.95);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);}
+    .topbar-logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;}
+    .topbar-logo span{color:var(--accent)}
+    .nav-btn{background:transparent;border:1px solid transparent;padding:8px 14px;border-radius:8px;color:var(--text2);cursor:pointer;transition:.2s}
+    .nav-btn.active, .nav-btn:hover{background:var(--surface2);color:var(--text);}
+    .topbar-actions{display:flex;gap:10px;align-items:center}
+    .cart-btn,.logout-btn{border:1px solid var(--border);border-radius:8px;padding:8px 12px;background:var(--surface2);color:var(--text2);cursor:pointer;}
+    .cart-badge{min-width:20px;height:20px;border-radius:999px;background:var(--accent);color:#000;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-left:6px;}
+    .page-wrap{flex:1;overflow:auto;}
+    .hero{padding:50px 28px 24px;background:linear-gradient(135deg,#13131a 0%,#0d0d18 100%);border-bottom:1px solid var(--border);}
+    .hero h1{font-family:'Syne',sans-serif;font-size:clamp(30px,4vw,48px);margin-bottom:10px;line-height:1.1;}
+    .hero p{color:var(--text2);margin-bottom:18px;max-width:520px;}
+    .controls{display:flex;gap:12px;flex-wrap:wrap}
+    .controls input,.controls select{background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:13px 14px;min-width:200px;}
+    .products-grid{padding:24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gAp:18px;}
+    .section{display:none;}
+    .section.active{display:block;}
+    .product-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:.25s;}
+    .product-card:hover{transform:translateY(-3px);border-color:rgba(240,192,64,.35);}
+    .product-img{height:150px;display:flex;align-items:center;justify-content:center;font-size:58px;background:var(--surface2);position:relative;}
+    .stock-badge{position:absolute;top:10px;right:10px;font-size:12px;padding:4px 8px;border-radius:8px;font-weight:700;}
+    .stock-ok{background:rgba(74,222,128,.16);color:var(--accent3);border:1px solid rgba(74,222,128,.34);}
+    .stock-low{background:rgba(255,107,53,.16);color:var(--accent2);border:1px solid rgba(255,107,53,.34);}
+    .stock-out{background:rgba(255,77,109,.16);color:var(--danger);border:1px solid rgba(255,77,109,.34);}
+    .product-body{padding:16px;}
+    .product-name{font-weight:700;margin-bottom:5px;}
+    .product-category{font-size:12px;color:var(--text3);text-transform:uppercase;margin-bottom:8px;}
+    .product-price{font-size:20px;font-family:'Syne',sans-serif;color:var(--accent);margin-bottom:10px;}
+    .add-cart-btn{width:100%;padding:11px;font-weight:700;border-radius:8px;border:none;background:rgba(240,192,64,.12);color:var(--accent);cursor:pointer;transition:.2s;}
+    .add-cart-btn:hover{background:var(--accent);color:#000;}
+    .add-cart-btn:disabled{opacity:.5;cursor:not-allowed;background:var(--surface2);color:var(--text3);}
+    .cart-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:80;display:none;}
+    .cart-overlay.open{display:block;}
+    .cart-panel{position:absolute;top:0;right:0;background:var(--surface);width:min(440px,92vw);height:100%;display:flex;flex-direction:column;transform:translateX(100%);transition:.3s;}
+    .cart-overlay.open .cart-panel{transform:translateX(0);}
+    .cart-header{padding:20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+    .cart-content{flex:1;overflow:auto;padding:14px;}
+    .cart-item{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--surface2);padding:10px;border-radius:10px;margin-bottom:10px;}
+    .cart-item-details{flex:1;}
+    .qty-controls{display:flex;gap:5px;align-items:center;}
+    .qty-controls button{width:26px;height:26px;border:none;border-radius:6px;background:var(--surface3);color:var(--text);cursor:pointer;}
+    .checkout-area{padding:18px;border-top:1px solid var(--border);}
+    .checkout-area button{width:100%;padding:13px;background:var(--accent);color:#000;border:none;border-radius:10px;font-weight:700;cursor:pointer;}
+    .admin-layout{display:flex;min-height:calc(100vh - 64px);}
+    .admin-sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);padding:20px;}
+    .admin-sidebar h3{font-size:12px;color:var(--text3);text-transform:uppercase;margin-bottom:8px;}
+    .nav-item{padding:10px 12px;border-radius:8px;color:var(--text2);cursor:pointer;margin-bottom:6px;}
+    .nav-item.active,.nav-item:hover{background:var(--surface2);color:var(--text);}
+    .admin-main{flex:1;overflow:auto;padding:24px;}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px;}
+    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;}
+    .stat-card h4{margin-bottom:8px;color:var(--text2);font-size:12px;}  
+    .stat-card strong{font-size:22px;display:block;}
+    table{width:100%;border-collapse:collapse;margin-top:10px;}
+    th,td{padding:10px 8px;border-bottom:1px solid var(--border);font-size:14px;text-align:left;}
+    .badge{padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700;}
+    .status-completed{background:rgba(74,222,128,.2);color:var(--accent3)}
+    .status-pending{background:rgba(255,107,53,.2);color:var(--accent2)}
+    .status-cancelled{background:rgba(255,77,109,.2);color:var(--danger)}
+    .modal-container{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:100;}
+    .modal-container.open{display:flex;}
+    .modal{background:var(--surface);border:1px solid var(--border);padding:24px;border-radius:16px;width:min(96vw,520px);}
+    .modal h4{margin-bottom:14px;}
+    .modal input,.modal select{width:100%;margin-bottom:10px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);}
+    .modal .btns{display:flex;gap:8px;justify-content:flex-end;}
+    .btn{display:inline-flex;gap:8px;align-items:center;cursor:pointer;border:none;border-radius:8px;padding:10px 14px;}
+    .btn.primary{background:var(--accent);color:#000;font-weight:700;}
+    .btn.danger{background:rgba(255,77,109,.18);color:var(--text);}
+    .toast-slot{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;}
+    .toast{background:var(--surface2);padding:12px 14px;border-radius:8px;border:1px solid var(--border);}
+  </style>
+</head>
+<body>
+  <div id="auth-screen" class="screen active">
+    <div style="padding:40px;display:grid;place-items:center;min-height:100vh;">
+      <div style="background:var(--surface);padding:30px;border:1px solid var(--border);border-radius:20px;width:min(420px,95vw);">
+        <h2 style="font-family:'Syne',sans-serif;margin-bottom:8px;">Shop<span style="color:var(--accent)">OS</span></h2>
+        <p style="color:var(--text2);margin-bottom:18px;">Login as Customer or Admin</p>
+        <div style="display:flex;gap:10px;margin-bottom:12px;"><button class="btn nav-btn active" id="role-customer" onclick="selectRole('customer')">🛍️ Customer</button><button class="btn nav-btn" id="role-admin" onclick="selectRole('admin')">🧑‍💼 Admin</button></div>
+        <div id="auth-message" style="margin-bottom:10px;height:18px;color:var(--danger);font-size:13px;visibility:hidden;"></div>
+        <input id="login-user" type="text" placeholder="Username" style="width:100%;margin-bottom:10px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);" />
+        <input id="login-pass" type="password" placeholder="Password" style="width:100%;margin-bottom:14px;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);" />
+        <button class="btn primary" style="width:100%;" onclick="login()">Sign In</button>
+        <p style="margin-top:10px;font-size:13px;color:var(--text2);">Customer: user/user123 • Admin: admin/admin123</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="customer-screen" class="screen">
+    <nav class="topbar">
+      <div class="topbar-logo">Shop<span>OS</span></div>
+      <div class="topbar-actions">
+        <span id="customer-name" style="font-weight:700;">User</span>
+        <button class="cart-btn" onclick="toggleCart()">🛒 Cart <span class="cart-badge" id="cart-count">0</span></button>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </nav>
+    <div class="page-wrap">
+      <div class="hero">
+        <h1>Shop <em>Smart.</em> Pay Less.</h1>
+        <p>Browse products, manage cart, checkout with invoice generation.</p>
+        <div class="controls"><input id="search" placeholder="Search products" oninput="renderProducts()" /><select id="category" onchange="renderProducts()"><option value="">All Categories</option></select></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:10px;"><button class="nav-btn active" onclick="showSection('products')">Products</button><button class="nav-btn" onclick="showSection('wishlist')">Wishlist</button></div>
+      <div id="products-section" class="section active"><div class="products-grid" id="products-grid"></div></div>
+      <div id="wishlist-section" class="section"><div class="products-grid" id="wishlist-grid"></div></div>
+    </div>
+  </div>
+
+  <div class="cart-overlay" id="cart-overlay" onclick="if(event.target===this)toggleCart()">
+    <div class="cart-panel">
+      <div class="cart-header"><strong>Your Cart</strong><button class="btn danger" onclick="toggleCart()">✕</button></div>
+      <div class="cart-content" id="cart-items"></div>
+      <div class="checkout-area"><div style="display:flex;justify-content:space-between;margin-bottom:10px;"><span>Total:</span><strong id="cart-total">₹0</strong></div><button onclick="checkout()">Place Order</button></div>
+    </div>
+  </div>
+
+  <div id="admin-screen" class="screen">
+    <nav class="topbar">
+      <div class="topbar-logo">Shop<span>OS</span> Admin</div>
+      <div class="topbar-actions"><button class="logout-btn" onclick="logout()">Logout</button></div>
+    </nav>
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <h3>Admin Menu</h3>
+        <div class="nav-item active" data-panel="dashboard" onclick="selectAdminPanel(this)">📊 Dashboard</div>
+        <div class="nav-item" data-panel="products" onclick="selectAdminPanel(this)">📦 Products</div>
+        <div class="nav-item" data-panel="orders" onclick="selectAdminPanel(this)">🧾 Orders</div>
+        <div class="nav-item" data-panel="stock" onclick="selectAdminPanel(this)">⚠️ Low Stock</div>
+      </aside>
+      <main class="admin-main">
+        <section class="admin-panel active" id="panel-dashboard">
+          <h2>Dashboard</h2>
+          <div class="stats-grid" id="stats-grid"></div>
+        </section>
+        <section class="admin-panel" id="panel-products">
+          <h2>Product Management</h2>
+          <div style="display:flex;gap:10px;margin-bottom:14px;"><input id="admin-search" placeholder="Search products" oninput="renderAdminProducts()" /><button class="btn primary" onclick="openProductModal()">+ Add Product</button></div>
+          <div class="products-grid" id="admin-products-grid"></div>
+        </section>
+        <section class="admin-panel" id="panel-orders">
+          <h2>Orders</h2>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
+            <input id="admin-order-search" placeholder="Search order/customer" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);" oninput="fetchOrders()" />
+            <select id="admin-order-sort" onchange="fetchOrders()" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);">
+              <option value="created_at">Date</option>
+              <option value="customer">Customer</option>
+              <option value="total">Total</option>
+              <option value="status">Status</option>
+            </select>
+            <select id="admin-order-dir" onchange="fetchOrders()" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);">
+              <option value="desc">Desc</option>
+              <option value="asc">Asc</option>
+            </select>
+          </div>
+          <div style="overflow-x:auto;"><table><thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th><th>Date</th><th>Action</th></tr></thead><tbody id="orders-tbody"></tbody></table></div>
+        </section>
+        <section class="admin-panel" id="panel-stock">
+          <h2>Low Stock Alerts</h2>
+          <div id="low-stock"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-container" id="modal-product"><div class="modal"><h4 id="modal-title">Add Product</h4><input id="p-name" placeholder="Name" /><input id="p-category" placeholder="Category" /><input id="p-price" type="number" placeholder="Price" /><input id="p-stock" type="number" placeholder="Stock" /><input id="p-icon" placeholder="Icon (emoji)" /><div class="btns"><button class="btn danger" onclick="closeProductModal()">Cancel</button><button class="btn primary" onclick="saveProduct()">Save</button></div></div></div>
+
+  <div class="toast-slot" id="toast-slot"></div>
+
+  <script>
+    let role='customer';
+    let userData={id:null,username:'',full_name:''};
+    let products=[];
+    let cart=[];
+    let wishlist=[];
+    let editProductId=null;
+
+    const showToast=(msg,level='success')=>{
+      const toast=document.createElement('div');toast.className='toast';toast.textContent=msg;toast.style.borderColor=(level==='success'?'#4ade80':level==='error'?'#ff4d6d':'#60a5fa');document.getElementById('toast-slot').appendChild(toast);setTimeout(()=>toast.remove(),3000);
+    };
+
+    function selectRole(r){role=r;document.getElementById('role-customer').classList.toggle('active',r==='customer');document.getElementById('role-admin').classList.toggle('active',r==='admin');}
+
+    async function login(){
+      const user=document.getElementById('login-user').value.trim();
+      const pass=document.getElementById('login-pass').value.trim();
+      if(!user||!pass){const m=document.getElementById('auth-message');m.textContent='Please fill credentials';m.style.visibility='visible';return;}
+      try{
+        const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,password:pass,role})});
+        const d=await r.json();
+        if(!r.ok){throw new Error(d.error||'Login failed');}
+        userData=d;
+        role = d.role || role;
+        selectRole(role);
+        document.getElementById('customer-name').textContent=`${d.full_name}`;
+        document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+        document.getElementById(role==='admin'?'admin-screen':'customer-screen').classList.add('active');
+        document.getElementById('auth-message').style.visibility='hidden';
+        localStorage.setItem('userData', JSON.stringify(d));
+        await loadData();
+        await loadWishlist();
+        showToast('Welcome '+d.full_name+'!');
+      }catch(err){const m=document.getElementById('auth-message');m.textContent=err.message;m.style.visibility='visible';}
+    }
+
+    function logout(){
+      fetch('/api/logout', {method:'POST'});
+      cart=[]; role='customer'; userData={id:null};
+      localStorage.removeItem('userData');
+      document.getElementById('auth-screen').classList.add('active');
+      document.getElementById('customer-screen').classList.remove('active');
+      document.getElementById('admin-screen').classList.remove('active');
+    }
+
+    async function loadData(){
+      const res=await fetch('/api/products');products=await res.json();populateFilter();renderProducts();
+      if(role==='admin'){await refreshAdmin();}
+    }
+
+    async function loadWishlist(){
+      const res=await fetch('/api/wishlist');
+      if(res.ok) wishlist=await res.json();
+      renderProducts();
+    }
+
+    function populateFilter(){const cat=Array.from(new Set(products.map(p=>p.category))).sort();const select=document.getElementById('category');select.innerHTML='<option value="">All Categories</option>'+cat.map(c=>`<option value="${c}">${c}</option>`).join('');}
+
+    function renderProducts(){const term=document.getElementById('search').value.toLowerCase();const category=document.getElementById('category').value;const grid=document.getElementById('products-grid');const filtered=products.filter(p=>(!term||p.name.toLowerCase().includes(term))&&(!category||p.category===category));
+      grid.innerHTML=filtered.length?filtered.map(p=>`<div class="product-card"><div class="product-img">${p.icon||'🛍️'}<span class="stock-badge ${p.stock===0?'stock-out':p.stock<=5?'stock-low':'stock-ok'}">${p.stock===0?'Out':' '+p.stock+' left'}</span></div><div class="product-body"><div class="product-category">${p.category}</div><div class="product-name">${p.name}</div><div class="product-price">₹${p.price}</div><div style="display:flex;gap:6px;"><button class="add-cart-btn" ${p.stock===0?'disabled':''} onclick="addToCart(${p.id})">${p.stock===0?'Out':'Add to Cart'}</button><button class="btn ${wishlist.includes(p.id)?'danger':'primary'}" onclick="toggleWishlist(${p.id})">${wishlist.includes(p.id)?'❤️':'🤍'}</button></div></div></div>`).join(''):'<div style="padding:50px;color:var(--text2);">No products found</div>';
+    }
+
+    function showSection(sec){document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));event.target.classList.add('active');document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(sec+'-section').classList.add('active');if(sec==='wishlist')renderWishlist();}
+
+    function renderWishlist(){const grid=document.getElementById('wishlist-grid');const filtered=products.filter(p=>wishlist.includes(p.id));
+      grid.innerHTML=filtered.length?filtered.map(p=>`<div class="product-card"><div class="product-img">${p.icon||'🛍️'}<span class="stock-badge ${p.stock===0?'stock-out':p.stock<=5?'stock-low':'stock-ok'}">${p.stock===0?'Out':' '+p.stock+' left'}</span></div><div class="product-body"><div class="product-category">${p.category}</div><div class="product-name">${p.name}</div><div class="product-price">₹${p.price}</div><div style="display:flex;gap:6px;"><button class="add-cart-btn" ${p.stock===0?'disabled':''} onclick="addToCart(${p.id})">${p.stock===0?'Out':'Add to Cart'}</button><button class="btn danger" onclick="toggleWishlist(${p.id})">❤️ Remove</button></div></div></div>`).join(''):'<div style="padding:50px;color:var(--text2);">Wishlist is empty</div>';
+    }
+
+    function addToCart(pid){const p=products.find(o=>o.id===pid);if(!p||p.stock===0){showToast('Out of stock','error');return;}const existing=cart.find(c=>c.id===pid);if(existing){if(existing.qty>=p.stock){showToast('Stock limit','error');return;}existing.qty++;}else{cart.push({...p,qty:1});}updateCart();showToast(`${p.name} added`,'success');}
+
+    function updateCart(){document.getElementById('cart-count').textContent=cart.reduce((s,i)=>s+i.qty,0);document.getElementById('cart-total').textContent='₹'+cart.reduce((s,i)=>s+i.qty*i.price,0).toFixed(2);const items=document.getElementById('cart-items');if(!cart.length){items.innerHTML='<div style="padding:30px;color:var(--text2);text-align:center;">Cart is empty</div>';return;} items.innerHTML=cart.map(i=>`<div class="cart-item"><div class="cart-item-details"><strong>${i.name}</strong><div>₹${(i.price*i.qty).toFixed(2)} (${i.qty}×₹${i.price})</div></div><div class="qty-controls"><button onclick="changeQty(${i.id},-1)">-</button><span>${i.qty}</span><button onclick="changeQty(${i.id},1)">+</button></div><button class="btn danger" onclick="removeCart(${i.id})">x</button></div>`).join('');}
+    function changeQty(id,d){const item=cart.find(i=>i.id===id);if(!item)return;item.qty+=d;if(item.qty<1){removeCart(id);return;}if(item.qty>item.stock){item.qty=item.stock;showToast('Max stock reached','error');}updateCart();}
+    function removeCart(id){cart=cart.filter(i=>i.id!==id);updateCart();}
+    function toggleCart(){document.getElementById('cart-overlay').classList.toggle('open');}
+
+    async function toggleWishlist(pid){
+      if(!userData.id){showToast('Login required','error');return;}
+      const inWishlist = wishlist.includes(pid);
+      const method = inWishlist ? 'DELETE' : 'POST';
+      const url = inWishlist ? `/api/wishlist/${pid}` : '/api/wishlist';
+      const body = inWishlist ? null : JSON.stringify({product_id: pid});
+      const res = await fetch(url, {method, headers:{'Content-Type':'application/json'}, body});
+      if(res.ok){
+        if(inWishlist) wishlist = wishlist.filter(id=>id!==pid);
+        else wishlist.push(pid);
+        renderProducts();
+        showToast(inWishlist?'Removed from wishlist':'Added to wishlist');
+      }
+    }
+
+    async function checkout(){if(!cart.length){showToast('Cart empty','error');return;}if(!userData.id){showToast('Login required','error');return;} const payload={items:cart.map(i=>({product_name:i.name,qty:i.qty,unit_price:i.price}))};
+      const res=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await res.json();if(!res.ok){showToast(d.error||'Checkout failed','error');return;}showToast('Order '+d.order_id+' placed');cart=[];updateCart();await loadData();
+    }
+
+    function selectAdminPanel(el){document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));el.classList.add('active');const panel=el.dataset.panel;document.querySelectorAll('.admin-panel').forEach(x=>x.classList.toggle('active',x.id==='panel-'+panel));if(panel==='dashboard')fetchDashboard();if(panel==='orders')fetchOrders();if(panel==='stock')fetchLowStock();}
+
+    async function refreshAdmin(){await fetchDashboard();await renderAdminProducts();await fetchOrders();await fetchLowStock();}
+
+    async function fetchDashboard(){const res=await fetch('/api/dashboard');const d=await res.json();const stat=
+      `<div class="stat-card"><h4>Total Revenue</h4><strong>₹${Number(d.total_revenue).toFixed(2)}</strong></div><div class="stat-card"><h4>Products</h4><strong>${d.total_products}</strong></div><div class="stat-card"><h4>Orders</h4><strong>${d.total_orders}</strong></div><div class="stat-card"><h4>Low Stock</h4><strong>${d.low_stock}</strong></div>`;
+      document.getElementById('stats-grid').innerHTML=stat;
+    }
+
+    async function renderAdminProducts(){const q=document.getElementById('admin-search').value.toLowerCase();const grid=document.getElementById('admin-products-grid');const list=products.filter(p=>!q||p.name.toLowerCase().includes(q)||p.category.toLowerCase().includes(q));
+      grid.innerHTML=list.map(p=>`<div class="product-card"><div class="product-img">${p.icon||'📦'}<span class="stock-badge ${p.stock===0?'stock-out':p.stock<=5?'stock-low':'stock-ok'}">${p.stock}</span></div><div class="product-body"><div class="product-name">${p.name}</div><div class="product-category">${p.category}</div><div class="product-price">₹${p.price}</div><div style="display:flex;gap:6px;"><button class="btn primary" onclick="editProduct(${p.id})">Edit</button><button class="btn danger" onclick="removeProduct(${p.id})">Delete</button></div></div></div>`).join('');
+    }
+
+    async function fetchOrders(){
+      const sortBy=document.getElementById('admin-order-sort')?.value || 'created_at';
+      const sortDir=document.getElementById('admin-order-dir')?.value || 'desc';
+      const searchTerm=document.getElementById('admin-order-search')?.value.trim().toLowerCase() || '';
+      const res=await fetch(`/api/orders?role=admin&sort_by=${encodeURIComponent(sortBy)}&sort_dir=${encodeURIComponent(sortDir)}`);
+      const rows=await res.json();
+      const filtered=rows.filter(o => !searchTerm || o.customer.toLowerCase().includes(searchTerm) || o.username?.toLowerCase().includes(searchTerm) || o.id.toString().includes(searchTerm));
+      document.getElementById('orders-tbody').innerHTML=filtered.map(o=>`<tr><td>${o.id}</td><td>${o.customer}</td><td>₹${o.total.toFixed(2)}</td><td><span class="badge status-${o.status}">${o.status}</span></td><td>${o.created_at}</td><td><button class="btn primary" onclick="openInvoice(${o.id})">Invoice</button></td></tr>`).join('');
+    }
+    function openInvoice(orderId){window.open('/invoice/'+orderId,'_blank');}
+
+    async function fetchLowStock(){const res=await fetch('/api/low-stock');const row=await res.json();document.getElementById('low-stock').innerHTML=row.length?row.map(p=>`<div style="background:var(--surface2);border:1px solid var(--border);padding:12px;border-radius:10px;margin-bottom:8px;"><strong>${p.name}</strong> — ${p.stock} left</div>`).join(''):'<div style="color:var(--text2)">No low stock items</div>'}
+
+    function openProductModal(id=null){editProductId=id;document.getElementById('modal-product').classList.add('open');document.getElementById('modal-title').textContent=id?'Edit Product':'Add Product';
+      if(id){const p=products.find(x=>x.id===id);document.getElementById('p-name').value=p.name;document.getElementById('p-category').value=p.category;document.getElementById('p-price').value=p.price;document.getElementById('p-stock').value=p.stock;document.getElementById('p-icon').value=p.icon;}else{document.getElementById('p-name').value='';document.getElementById('p-category').value='Grocery';document.getElementById('p-price').value='0';document.getElementById('p-stock').value='1';document.getElementById('p-icon').value='📦';}}
+
+    function closeProductModal(){document.getElementById('modal-product').classList.remove('open');}
+
+    async function saveProduct(){
+      const name=document.getElementById('p-name').value.trim();const category=document.getElementById('p-category').value.trim();const price=Number(document.getElementById('p-price').value);const stock=Number(document.getElementById('p-stock').value);const icon=document.getElementById('p-icon').value.trim()||'📦';
+      if(!name||price<=0||stock<0){showToast('Invalid inputs','error');return;}
+      if(editProductId){await fetch('/api/admin/products/'+editProductId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,category,price,stock,icon})});} else {await fetch('/api/admin/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,category,price,stock,icon})});}
+      closeProductModal();await loadData();await renderAdminProducts();await fetchDashboard();}
+
+    async function removeProduct(id){if(!confirm('Delete?'))return;await fetch('/api/admin/products/'+id,{method:'DELETE'});await loadData();await renderAdminProducts();await fetchDashboard();showToast('Deleted','success');}
+
+    function editProduct(id){openProductModal(id);} 
+
+    async function checkAutoLogin(){
+      const stored = localStorage.getItem('userData');
+      if(stored){
+        try{
+          userData = JSON.parse(stored);
+          role = userData.role;
+          selectRole(role);
+          document.getElementById('customer-name').textContent=`${userData.full_name}`;
+          document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+          document.getElementById(role==='admin'?'admin-screen':'customer-screen').classList.add('active');
+          await loadData();
+          await loadWishlist();
+        }catch(e){localStorage.removeItem('userData');}
+      }
+    }
+  </script>
+</body>
+</html>

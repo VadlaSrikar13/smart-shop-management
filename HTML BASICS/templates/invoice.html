@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartShop Invoice #{{ order.id }}</title>
+  <style>
+    body{font-family:Arial,sans-serif;margin:0;padding:24px;color:#111;background:#f4f4f8;}
+    .invoice-container{max-width:800px;margin:0 auto;background:#fff;padding:28px;border-radius:12px;box-shadow:0 16px 30px rgba(0,0,0,.08);}
+    .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;}
+    .header h1{margin:0;color:#1f2937;}
+    .header small{color:#6b7280;}
+    .details, .items{margin-bottom:20px;}
+    .details div{margin-bottom:6px;}
+    table{width:100%;border-collapse:collapse;margin-top:10px;}
+    th,td{padding:10px;border:1px solid #e5e7eb;text-align:left;font-size:14px;}
+    th{background:#f9fafb;color:#374151;}
+    .text-right{text-align:right;}
+    .total-row td{font-weight:700;}
+    .status{display:inline-block;padding:6px 10px;border-radius:8px;font-weight:700;font-size:12px;}
+    .status-completed{background:#dcfce7;color:#15803d;}
+    .status-pending{background:#ffedd5;color:#9a3412;}
+    .status-cancelled{background:#fee2e2;color:#991b1b;}
+    .button-row{display:flex;gap:10px;margin-top:20px;}
+    .btn{padding:10px 16px;border:none;border-radius:8px;color:#fff;cursor:pointer;text-decoration:none;font-weight:700;}
+    .btn-print{background:#2563eb;}
+    .btn-back{background:#6b7280;}
+  </style>
+</head>
+<body>
+  <div class="invoice-container">
+    <div class="header">
+      <div>
+        <h1>SmartShop</h1>
+        <small>Invoice for your purchase</small>
+      </div>
+      <div>
+        <strong>Invoice #{{ order.id }}</strong><br />
+        {{ order.created_at }}
+      </div>
+    </div>
+
+    <div class="details">
+      <div><strong>Bill To:</strong> {{ order.full_name }} ({{ order.username }})</div>
+      <div><strong>Status:</strong>
+        <span class="status status-{{ order.status }}">{{ order.status|upper }}</span>
+      </div>
+      <div><strong>Total:</strong> ₹{{ '%.2f'|format(order.total) }}</div>
+    </div>
+
+    <div class="items">
+      <table>
+        <thead>
+          <tr>
+            <th>S.No</th>
+            <th>Product</th>
+            <th>Qty</th>
+            <th>Unit Price</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ item.product_name }}</td>
+            <td>{{ item.qty }}</td>
+            <td>₹{{ '%.2f'|format(item.unit_price) }}</td>
+            <td>₹{{ '%.2f'|format(item.unit_price * item.qty) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="total-row">
+      <table>
+        <tr>
+          <td>Subtotal</td>
+          <td class="text-right">₹{{ '%.2f'|format(order.total) }}</td>
+        </tr>
+        <tr>
+          <td>Tax (0%)</td>
+          <td class="text-right">₹0.00</td>
+        </tr>
+        <tr class="total-row">
+          <td>Total</td>
+          <td class="text-right">₹{{ '%.2f'|format(order.total) }}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="button-row">
+      <button class="btn btn-print" onclick="window.print()">Print Invoice</button>
+      <a class="btn btn-back" href="/">Back to Shop</a>
+    </div>
+  </div>
+</body>
+</html>
